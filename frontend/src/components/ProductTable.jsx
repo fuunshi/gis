@@ -5,11 +5,11 @@ import './ProductTable.css';
 const ProductTable = () => {
   const [data, setData] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [orderResponse, setOrderResponse] = useState(null);
 
   useEffect(() => {
     axios.get('http://localhost:1337/products')
       .then((response) => {
-        console.log(response.data);
         setData(response.data);
       })
       .catch((error) => {
@@ -20,13 +20,12 @@ const ProductTable = () => {
   const placeOrder = () => {
     axios.post('http://localhost:1337/place-order', { selectedProducts })
       .then((response) => {
-        console.log(response.data);
-        alert('Order placed successfully!');
+        setOrderResponse(response.data); // Store the API response
         setSelectedProducts([]); // Reset selected products after placing the order
       })
       .catch((error) => {
         console.error("Error placing order:", error);
-        alert('Failed to place order. Please try again.');
+        setOrderResponse({ error: 'Failed to place order. Please try again.' });
       });
   };
 
@@ -72,6 +71,34 @@ const ProductTable = () => {
       <button className="order-button" onClick={placeOrder}>
         Place Order
       </button>
+
+      {/* Display the response */}
+      {orderResponse && (
+        <div className="response-container">
+          {orderResponse.error ? (
+            <div className="error-message">{orderResponse.error}</div>
+          ) : (
+            <div className="success-message">
+              <h3>Order Details</h3>
+              {orderResponse.map((group, index) => (
+                <div key={index} className="order-group">
+                  <h4>Group {index + 1}</h4>
+                  <p><strong>Total Weight:</strong> {group.totalWeight} kg</p>
+                  <p><strong>Total Price:</strong> ${group.totalPrice}</p>
+                  <p><strong>Courier Price:</strong> ${group.courierPrice}</p>
+                  <ul>
+                    {group.items.map((item) => (
+                      <li key={item.id}>
+                        {item.name} - ${item.price}, {item.weight} kg
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

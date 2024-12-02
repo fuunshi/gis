@@ -13,9 +13,6 @@ app.use(express.json());
 const products = JSON.parse(fs.readFileSync('data/products.json', 'utf-8'));
 const courierCharges = JSON.parse(fs.readFileSync('data/courierCharges.json', 'utf-8'));
 
-console.log(products);
-console.log(courierCharges);
-
 // Get all products
 app.get('/products', (req, res) => {
   res.json(products);
@@ -31,26 +28,48 @@ app.post('/place-order', (req, res) => {
     const selectedProductIds = req.body.selectedProducts;
     const selectedProducts = products.filter(product => selectedProductIds.includes(product.id));
 
-    // const packages = () => {
-    //     let totalWeight = 0;
-    //     let totalVolume = 0;
-    //     let totalCost = 0;
-    //     let packages = [];
-    //     selectedProducts.forEach(product => {
-    //         totalWeight += product.weight;
-    //         totalVolume += product.volume;
-    //         totalCost += product.price;
-    //     });
-    //     let package = {
-    //         weight: totalWeight,
-    //         volume: totalVolume,
-    //         cost: totalCost
-    //     };
-    //     packages.push(package);
-    //     return packages;
-    // };
-    res.json(selectedProducts);
-    console.log(selectedProducts);
+    function optimizePackages(selectedProducts) {
+        // Sort products by price in descending order
+      const sortedProducts = [...selectedProducts].sort((a, b) => b.price - a.price);
+      const packages = [];
+    
+      while (sortedProducts.length > 0) {
+        const currentPackage = {
+          items: [],
+          totalWeight: 0,
+          totalPrice: 0,
+          courierPrice: 0
+        };
+    
+        // Add products to package while respecting constraints
+        for (let i = 0; i < sortedProducts.length; i++) {
+          const product = sortedProducts[i];
+          
+          if (currentPackage.totalPrice + product.price <= 250) {
+            currentPackage.items.push(product);
+            currentPackage.totalWeight += product.weight;
+            currentPackage.totalPrice += product.price;
+            sortedProducts.splice(i, 1);
+            i--;
+          }
+        }
+    
+        // Determine courier price based on weight
+        currentPackage.courierPrice = getCourierPrice(currentPackage.totalWeight);
+        packages.push(currentPackage);
+      }
+    
+      return packages;
+    }
+    
+    function getCourierPrice(weight) {
+      if (weight <= 200) return 5;
+      if (weight <= 500) return 10;
+      if (weight <= 1000) return 15;
+      return 20;
+    }
+    
+    res.json(optimizePackages(selectedProducts));
 });
 
 // Start the server
